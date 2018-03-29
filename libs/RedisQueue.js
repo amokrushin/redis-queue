@@ -47,7 +47,7 @@ class RedisQueue {
             this._startWatchdog();
         }
         /*
-         * Start infinite async loop until "cancel" method will not be not called
+         * Start infinite async loop until "cancel" method will not be called
          */
         while (this._isActive) {
             const res = await this._dequeue();
