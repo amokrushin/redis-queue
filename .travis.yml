@@ -1,0 +1,23 @@
+sudo: required
+services:
+  - docker
+language: node_js
+os: linux
+cache: yarn
+node_js:
+  - stable
+before_install:
+  - npm run docker:test:setup
+  - docker ps -a
+script:
+  - npm test
+after_success:
+  - npx iamtest -c lcovonly && npx codecov
+deploy:
+  provider: npm
+  email: anton@mokr.org
+  api_key:
+    secure: CdQDivAgyDCw+GU2A66HS1hfDWJ6DzTGrzrP/0EjLdv77MsCvQ7NL857k0HqPjDM5vgWJZX2S3uDU0aTnM6b3CKSfj/y041fIjbi7pK6qVFbz30PQIi4eHaN8dyjA/hcD/4hfbVSjIwOW+Z6YXIxOwU7DZVmS4oh1TJdK5Wk0+IhLSuwZYipKNCnQmF3dxItr0Bdj1dZsI4uTV0BSq82+Y28NohmfkZtf8fIk5pbIfDS6JDk0rAKxeDGoA8a57k22/2ko92ZjbhwjzCYA8rwx8SmBA6utr7cKY5mxWAMB+gCj1KqleWmnM0T4r1mqlMGmMDSw04/81zExlUgfGRqhGjuQvsvFr5m03hrik2NVbL0u7YWq0xf59dDfHUXczSTnn8WC90P3nAxzRWGEeqN/fxWZNE4jaRBTndaRSl5q41yZHJwpEZ7WXnP5g9dVpu9p1qtKwAT32pl35vVliKppap0P3uurWakWmxRbh3JT3C3lpW11JrD8L0wLg18XmrNwS/S5bLSY08e5q94b6SUSPx+w0IChC0LpaGOj22DGe1yhuzjCUdfD7wAcPb59xug9/3NzYJIpe28fwplKcTLX30enspuQ6ISzZAYoBNdGiwg3g/L/AsZMRbIFCNQoMgwtZw9ghtyWoa+nvGwkzIb9xeNOMOGP+qfCurjOJPRLqU=
+  on:
+    tags: true
+    repo: amokrushin/redis-queue

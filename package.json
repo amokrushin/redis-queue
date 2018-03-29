@@ -1,0 +1,48 @@
+{
+  "name": "@amokrushin/redis-queue",
+  "version": "0.1.0",
+  "description": "",
+  "license": "MIT",
+  "author": "Anton Mokrushin <anton@mokr.org>",
+  "files": [
+    "libs",
+    "lua"
+  ],
+  "main": "libs/RedisQueue.js",
+  "scripts": {
+    "cleanup": "rimraf coverage/ .nyc_output/ node_modules/.cache/",
+    "docker:cleanup": "./scripts/docker-test-run.sh npm run cleanup",
+    "docker:test:integration": "./scripts/docker-test-run.sh iamtest -r spec test/integration/*",
+    "docker:test:unit": "./scripts/docker-test-run.sh iamtest -r spec test/unit/*",
+    "docker:test:setup": "./scripts/docker-test-setup.sh",
+    "lint": "eslint libs/**/*.js",
+    "test": "run-s -c docker:test:unit docker:test:integration",
+    "test:dev": "iamtest -r spec",
+    "preversion": "run-s lint test"
+  },
+  "dependencies": {
+    "@amokrushin/watchdog": "^0.1.4",
+    "lodash.defaults": "^4.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.9.0",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-plugin-import": "^2.7.0",
+    "iamtest": "^1.5.4",
+    "ioredis": "^3.2.2",
+    "npm-run-all": "^4.1.2",
+    "rimraf": "^2.6.2",
+    "sinon": "^4.4.10",
+    "tape": "^4.9.0",
+    "tape-async": "^2.3.0"
+  },
+  "peerDependencies": {
+    "ioredis": "^3.2.2"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
