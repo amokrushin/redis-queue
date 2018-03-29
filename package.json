@@ -1,6 +1,6 @@
 {
   "name": "@amokrushin/redis-queue",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "",
   "license": "MIT",
   "author": "Anton Mokrushin <anton@mokr.org>",
@@ -17,6 +17,7 @@
     "docker:test:setup": "./scripts/docker-test-setup.sh",
     "lint": "eslint libs/**/*.js",
     "test": "run-s -c docker:test:unit docker:test:integration",
+    "test:coverage": "./scripts/docker-test-run.sh iamtest -c lcovonly test/unit/*",
     "test:dev": "iamtest -r spec",
     "preversion": "run-s lint test"
   },

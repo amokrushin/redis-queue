@@ -17,7 +17,7 @@ before_install:
 script:
   - npm test
 after_success:
-  - npx iamtest -c lcovonly && npx codecov
+  - npm run test:coverage && npx codecov
 deploy:
   provider: npm
   email: anton@mokr.org
