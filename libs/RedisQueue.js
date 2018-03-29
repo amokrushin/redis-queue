@@ -26,6 +26,8 @@ class RedisQueue {
         this._startWatchdogrInitialized = false;
 
         this._isActive = false;
+
+        this._onPubsubMessage = this._onPubsubMessage.bind(this);
     }
 
     async enqueue(payload) {
