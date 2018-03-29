@@ -7,7 +7,12 @@ cache: yarn
 node_js:
   - stable
 before_install:
-  - npm run docker:test:setup
+  - sudo apt-get update
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
+  - docker pull redis:3.2.11-alpine
+  - docker pull node:9.9.0-alpine
+  - docker network create --driver bridge test-net
+  - docker run -d --rm --name redis --network test-net redis:3.2.11-alpine
   - docker ps -a
 script:
   - npm test
