@@ -2,6 +2,10 @@
   "name": "@amokrushin/redis-queue",
   "version": "0.1.4",
   "description": "",
+  "homepage": "https://github.com/amokrushin/redis-queue#readme",
+  "bugs": {
+    "url": "https://github.com/amokrushin/redis-queue/issues"
+  },
   "license": "MIT",
   "author": "Anton Mokrushin <anton@mokr.org>",
   "files": [
@@ -9,6 +13,10 @@
     "lua"
   ],
   "main": "libs/RedisQueue.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/amokrushin/redis-queue.git"
+  },
   "scripts": {
     "cleanup": "rimraf coverage/ .nyc_output/ node_modules/.cache/",
     "docker:cleanup": "./scripts/docker-test-run.sh npm run cleanup",
