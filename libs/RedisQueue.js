@@ -93,7 +93,7 @@ class RedisQueue {
             return null;
         }
         /*
-         * Race condition: pubsub emits 'message' either watchdog emits 'trigger', who's first?
+         * Race condition: pubsub emits 'message' either watchdog emits 'trigger', who'll be the first?
          */
         return new Promise((resolve) => {
             const pubsub = this._pubsub;
