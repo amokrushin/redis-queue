@@ -191,6 +191,12 @@ class RedisQueue {
     static deserialize(data) {
         return JSON.parse(data);
     }
+
+    static async getErrors(createClient) {
+        const redis = createClient({ ref: Symbol.for('nonblocking') });
+        redis.defineCommand('msgerrors', lua.msgerrors);
+        return redis.msgerrors();
+    }
 }
 
 RedisQueue.defaultOptions = {
