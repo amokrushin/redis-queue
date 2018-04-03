@@ -7,11 +7,66 @@
 [![License][license-image]][license-url]
 
 
+
+_WIP_
+
+
 ## Install
 
 ```bash
 npm i @amokrushin/redis-queue
 ```
+
+
+<a id="RedisQueue"></a>
+## RedisQueue
+
+* [RedisQueue](#RedisQueue)
+    * [new RedisQueue(createClient, [options])](#new+RedisQueue)
+    * _instance_
+        * [.enqueue(payload)](#RedisQueue+enqueue) ⇒ <code>Promise</code>
+        * [.dequeue()](#RedisQueue+dequeue) ⇒ <code>Promise</code>
+        * [.cancel()](#RedisQueue+cancel)
+    * _static_
+        * [.serialize()](#RedisQueue.serialize)
+        * [.deserialize()](#RedisQueue.deserialize)
+
+
+<a id="new+RedisQueue"></a>
+### new RedisQueue(createClient, [options])
+
+Creates a RedisQueue instance
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| `createClient` | `function` |  | Function returning Redis instance. |
+| `[options.pollTimeout]` | `number` | `10000` | Force subscriber to poll a queue for a new item. Timer restarts every time after new item was enqueued. |
+| `[options.notificationsChannel]` | `string` | `__redis-queue_notifications__` |  |
+
+
+<a id="RedisQueue+enqueue"></a>
+### redisQueue.enqueue(payload) ⇒ `Promise<>`
+
+Enqueue new message to a queue.
+
+| Param | Type | Description |
+| --- | --- | --- |
+| payload | `any` | Any serializable payload. The payload is serialized using the [.serialize()](#RedisQueue.serialize) method. |
+
+
+<a id="RedisQueue+dequeue"></a>
+### redisQueue.dequeue() ⇒ `Promise<Object|null>`
+
+Dequeue message from a queue.
+
+**Returns**: `Promise<Object>`
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | Message identyfier |
+| `payload` | `any` | The payload deserialized using the [.deserialize()](#RedisQueue.deserialize) method. |
+| `ack` | `function` | The function should be called if message processing was failed. |
+| `nack` | `function` | The function should be called if message processing was succesful. |
 
 
 
