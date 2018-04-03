@@ -142,7 +142,7 @@ class RedisQueue {
 
     _initPublisher() {
         if (!this._redis) {
-            this._redis = this._createClient();
+            this._redis = this._createClient({ ref: Symbol.for('nonblocking') });
         }
         this._redis.defineCommand('msgenqueue', lua.msgenqueue);
         this._publisherInitialized = true;
@@ -150,7 +150,7 @@ class RedisQueue {
 
     _initSubscriber() {
         if (!this._redis) {
-            this._redis = this._createClient();
+            this._redis = this._createClient({ ref: Symbol.for('nonblocking') });
         }
         this._redis.defineCommand('msgdequeue', lua.msgdequeue);
         this._redis.defineCommand('msgack', lua.msgack);
@@ -165,7 +165,7 @@ class RedisQueue {
 
     _startWatchdog() {
         const { pollTimeout } = this._options;
-        this._pubsub = this._createClient();
+        this._pubsub = this._createClient({ ref: Symbol.for('subscriber') });
         this._watchdog = new Watchdog({
             timeout: pollTimeout,
             continuous: true,
