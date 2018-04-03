@@ -12,12 +12,26 @@ class RedisQueue {
      *  - configurable redis keys namespace
      */
     constructor(createClient, options) {
-        assert.equal(typeof createClient, 'function', 'createClient argument must be a function');
+        assert.equal(
+            typeof createClient,
+            'function',
+            'createClient argument must be a function',
+        );
 
-        this._options = defaults(options, {
-            pubsubChannel: 'queue',
-            logger: { info: noop },
-        });
+        this._options = defaults(
+            options,
+            this.constructor.defaultOptions,
+        );
+
+        assert.ok(
+            this._options.pollTimeout > 0,
+            'pollTimeout value must be greater than 0',
+        );
+
+        assert.ok(
+            typeof this._options.notificationsChannel === 'string' && this._options.notificationsChannel,
+            'notificationsChannel value must be non empty string',
+        );
 
         this._createClient = createClient;
         this._serialize = this.constructor.serialize;
@@ -31,14 +45,14 @@ class RedisQueue {
     }
 
     async enqueue(payload) {
-        const { pubsubChannel } = this._options;
+        const { notificationsChannel } = this._options;
 
         if (!this._publisherInitialized) {
             this._initPublisher();
         }
 
         await this._redis.msgenqueue(this._serialize(payload));
-        await this._redis.publish(pubsubChannel, '');
+        await this._redis.publish(notificationsChannel, '');
     }
 
     async dequeue() {
@@ -98,11 +112,11 @@ class RedisQueue {
         return new Promise((resolve) => {
             const pubsub = this._pubsub;
             const watchdog = this._watchdog;
-            const { logger, pubsubChannel } = this._options;
+            const { logger, notificationsChannel } = this._options;
 
             function onMessage(msgChannel) {
-                if (msgChannel !== pubsubChannel) return;
-                logger.info('pubsub event received');
+                if (msgChannel !== notificationsChannel) return;
+                logger.info('notification received');
                 next();
             }
 
@@ -145,25 +159,25 @@ class RedisQueue {
     }
 
     _onPubsubMessage(channel) {
-        if (channel !== this._options.pubsubChannel) return;
+        if (channel !== this._options.notificationsChannel) return;
         this._watchdog.reset();
     }
 
     _startWatchdog() {
+        const { pollTimeout } = this._options;
         this._pubsub = this._createClient();
         this._watchdog = new Watchdog({
-            // TODO: magic number -> move to options
-            timeout: 1000,
+            timeout: pollTimeout,
             continuous: true,
         });
         this._pubsub.on('message', this._onPubsubMessage);
-        this._pubsub.subscribe(this._options.pubsubChannel);
+        this._pubsub.subscribe(this._options.notificationsChannel);
         this._isActive = true;
     }
 
     _stopWatchdog() {
         this._isActive = false;
-        this._pubsub.unsubscribe(this._options.pubsubChannel);
+        this._pubsub.unsubscribe(this._options.notificationsChannel);
         this._pubsub.removeListener('message', this._onPubsubMessage);
         this._pubsub.quit();
         this._watchdog.cancel();
@@ -178,5 +192,11 @@ class RedisQueue {
         return JSON.parse(data);
     }
 }
+
+RedisQueue.defaultOptions = {
+    logger: { info: noop },
+    pollTimeout: 10000,
+    notificationsChannel: '__redis-queue_notifications__',
+};
 
 module.exports = RedisQueue;
