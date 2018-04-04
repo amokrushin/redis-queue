@@ -1,6 +1,6 @@
 {
   "name": "@amokrushin/redis-queue",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "",
   "homepage": "https://github.com/amokrushin/redis-queue#readme",
   "bugs": {
