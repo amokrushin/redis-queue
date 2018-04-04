@@ -36,7 +36,7 @@ class RedisQueue {
         this._serialize = this.constructor.serialize;
         this._deserialize = this.constructor.deserialize;
         this._publisherInitialized = false;
-        this._startWatchdogrInitialized = false;
+        this._startWatchdogInitialized = false;
         this._luaContext = { ...this._options, joinKey };
 
         this._isActive = false;
@@ -56,7 +56,7 @@ class RedisQueue {
     }
 
     async dequeue() {
-        if (!this._startWatchdogrInitialized) {
+        if (!this._startWatchdogInitialized) {
             this._initSubscriber();
         }
         if (!this._isActive) {
@@ -176,7 +176,7 @@ class RedisQueue {
         this._redis.defineCommand('msgdequeue', lua.msgdequeue(this._luaContext));
         this._redis.defineCommand('msgack', lua.msgack(this._luaContext));
         this._redis.defineCommand('msgnack', lua.msgnack(this._luaContext));
-        this._startWatchdogrInitialized = true;
+        this._startWatchdogInitialized = true;
     }
 
     _onPubsubMessage(channel) {
