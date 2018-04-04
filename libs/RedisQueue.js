@@ -7,6 +7,9 @@ const noop = () => {};
 const joinKey = (...args) => args.filter(v => v).join(':');
 const inRange = (number, min, max) => (number >= min && number <= max);
 
+const NM_POLLING = 'polling';
+const NM_BLOCKING = 'blocking';
+
 class RedisQueue {
     constructor(createClient, options) {
         assert.equal(
@@ -36,47 +39,87 @@ class RedisQueue {
         this._serialize = this.constructor.serialize;
         this._deserialize = this.constructor.deserialize;
         this._publisherInitialized = false;
-        this._startWatchdogInitialized = false;
+        this._subscriberInitialized = false;
         this._luaContext = { ...this._options, joinKey };
 
         this._isActive = false;
+
+        this._blocking = null;
 
         this._onPubsubMessage = this._onPubsubMessage.bind(this);
     }
 
     async enqueue(payload) {
-        const { notificationsChannel } = this._options;
+        const { notificationsMode, notificationsChannel, keyNotifications, logger } = this._options;
 
         if (!this._publisherInitialized) {
             this._initPublisher();
         }
 
         await this._redis.msgenqueue(this._serialize(payload));
-        await this._redis.publish(notificationsChannel, '');
+
+        switch (notificationsMode) {
+            case NM_POLLING:
+                await this._redis.publish(notificationsChannel, '');
+                break;
+            case NM_BLOCKING:
+                await this._redis.lpush(keyNotifications, 'x');
+                break;
+            default:
+        }
+
+        logger.info('enqueued', payload);
     }
 
     async dequeue() {
-        if (!this._startWatchdogInitialized) {
+        const { notificationsMode, logger } = this._options;
+
+        if (!this._subscriberInitialized) {
             this._initSubscriber();
         }
-        if (!this._isActive) {
+        if (!this._isActive && notificationsMode === NM_POLLING) {
             this._startWatchdog();
         }
+        this._isActive = true;
         /*
          * Start infinite async loop until "cancel" method will not be called
          */
         while (this._isActive) {
             const res = await this._dequeue();
             if (res) {
+                logger.info('dequeued', res.payload);
                 return res;
             }
-            await this._waitForEvent();
+            switch (notificationsMode) {
+                case NM_POLLING:
+                    await this._waitForEvent();
+                    break;
+                case NM_BLOCKING:
+                    await this._waitForUnblock();
+                    break;
+                default:
+            }
         }
         return null;
     }
 
     cancel() {
-        this._stopWatchdog();
+        const { notificationsMode } = this._options;
+
+        this._isActive = false;
+
+        switch (notificationsMode) {
+            case NM_POLLING:
+                this._stopWatchdog();
+                break;
+            case NM_BLOCKING:
+                if (this._blocking) {
+                    this._blocking.quit();
+                    this._blocking = null;
+                }
+                break;
+            default:
+        }
     }
 
     async getNackedItems(params = {}) {
@@ -98,6 +141,11 @@ class RedisQueue {
         redis.quit();
 
         return erroredMessages.map(this.constructor.deserialize);
+    }
+
+    // eslint-disable-next-line class-methods-use-this
+    quit() {
+        throw new Error('RedisQueue may use shared a connections, so a quit method is not implemented');
     }
 
     async _dequeue() {
@@ -161,6 +209,23 @@ class RedisQueue {
         });
     }
 
+    async _waitForUnblock() {
+        /*
+         * Return early if dequeue canceled
+         */
+        if (!this._isActive) {
+            return null;
+        }
+
+        const blocking = this._blocking;
+        const { logger, keyNotifications, blockTimeout } = this._options;
+
+        logger.info('waiting for unblocking');
+        await blocking.brpop(keyNotifications, blockTimeout);
+
+        return null;
+    }
+
     _initPublisher() {
         if (!this._redis) {
             this._redis = this._createClient({ ref: Symbol.for('nonblocking') });
@@ -170,13 +235,24 @@ class RedisQueue {
     }
 
     _initSubscriber() {
+        const { notificationsMode } = this._options;
+
         if (!this._redis) {
             this._redis = this._createClient({ ref: Symbol.for('nonblocking') });
         }
         this._redis.defineCommand('msgdequeue', lua.msgdequeue(this._luaContext));
         this._redis.defineCommand('msgack', lua.msgack(this._luaContext));
         this._redis.defineCommand('msgnack', lua.msgnack(this._luaContext));
-        this._startWatchdogInitialized = true;
+        this._subscriberInitialized = true;
+
+        switch (notificationsMode) {
+            case NM_POLLING:
+                break;
+            case NM_BLOCKING:
+                this._blocking = this._createClient({ ref: Symbol('blocking') });
+                break;
+            default:
+        }
     }
 
     _onPubsubMessage(channel) {
@@ -193,11 +269,9 @@ class RedisQueue {
         });
         this._pubsub.on('message', this._onPubsubMessage);
         this._pubsub.subscribe(this._options.notificationsChannel);
-        this._isActive = true;
     }
 
     _stopWatchdog() {
-        this._isActive = false;
         this._pubsub.unsubscribe(this._options.notificationsChannel);
         this._pubsub.removeListener('message', this._onPubsubMessage);
         this._pubsub.quit();
@@ -215,15 +289,24 @@ class RedisQueue {
 }
 
 RedisQueue.defaultOptions = {
+    name: '',
     keyPrefix: 'redis-queue',
     keyQueue: 'items:queue',
     keySeq: 'seq',
     keyStore: 'items:store',
     keyProcessingItems: 'items:processing',
     keyNackedItems: 'items:nacked',
+    keyNotifications: 'notifications',
     logger: { info: noop },
     pollTimeout: 10000,
+    blockTimeout: 10000,
     notificationsChannel: '__redis-queue_notifications__',
+    notificationsMode: NM_POLLING, // pubsub or blocking
+};
+
+RedisQueue.notificationsModes = {
+    NM_POLLING,
+    NM_BLOCKING,
 };
 
 module.exports = RedisQueue;
