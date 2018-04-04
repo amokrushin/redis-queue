@@ -31,7 +31,8 @@
   },
   "dependencies": {
     "@amokrushin/watchdog": "^0.1.4",
-    "lodash.defaults": "^4.2.0"
+    "lodash.defaults": "^4.2.0",
+    "lodash.template": "^4.4.0"
   },
   "devDependencies": {
     "eslint": "^4.9.0",

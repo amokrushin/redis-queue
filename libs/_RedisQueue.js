@@ -5,6 +5,7 @@ const lua = require('./lua');
 
 const noop = () => {};
 const joinKey = (...args) => args.filter(v => v).join(':');
+const inRange = (number, min, max) => (number >= min && number <= max);
 
 class RedisQueue {
     constructor(createClient, options) {
@@ -76,6 +77,27 @@ class RedisQueue {
 
     cancel() {
         this._stopWatchdog();
+    }
+
+    async getNackedItems(params = {}) {
+        assert.ok(
+            typeof params === 'object',
+            'params must be an object',
+        );
+        const { limit } = defaults(params, { limit: 100 });
+        assert(
+            inRange(limit, 1, 100),
+            'limit must be in range [1,100]',
+        );
+
+        const redis = this._createClient({ ref: Symbol.for('nonblocking') });
+        redis.defineCommand('msgerrors', lua.msgerrors(this._luaContext));
+
+        const erroredMessages = await redis.msgerrors(limit);
+
+        redis.quit();
+
+        return erroredMessages;
     }
 
     async _dequeue() {
@@ -189,12 +211,6 @@ class RedisQueue {
 
     static deserialize(data) {
         return JSON.parse(data);
-    }
-
-    static async getErrors(createClient) {
-        const redis = createClient({ ref: Symbol.for('nonblocking') });
-        redis.defineCommand('msgerrors', lua.msgerrors);
-        return redis.msgerrors();
     }
 }
 

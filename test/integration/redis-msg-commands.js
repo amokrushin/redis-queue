@@ -10,6 +10,16 @@ const redis = new Redis({
     retryStrategy: () => false,
 });
 
+const luaContext = {
+    keyPrefix: '',
+    keyQueue: 'items:queue',
+    keySeq: 'seq',
+    keyStore: 'items:store',
+    keyProcessingItems: 'items:processing',
+    keyNackedItems: 'items:nacked',
+    joinKey: (...args) => args.filter(v => v).join(':'),
+};
+
 test('connect', (t) => {
     redis.once('connect', () => {
         t.pass('done');
@@ -25,11 +35,11 @@ test('connect', (t) => {
 test('setup', async (t) => {
     await redis.flushdb();
 
-    redis.defineCommand('msgenqueue', lua.msgenqueue);
-    redis.defineCommand('msgdequeue', lua.msgdequeue);
-    redis.defineCommand('msgack', lua.msgack);
-    redis.defineCommand('msgnack', lua.msgnack);
-    redis.defineCommand('msgerrors', lua.msgerrors);
+    redis.defineCommand('msgenqueue', lua.msgenqueue(luaContext));
+    redis.defineCommand('msgdequeue', lua.msgdequeue(luaContext));
+    redis.defineCommand('msgack', lua.msgack(luaContext));
+    redis.defineCommand('msgnack', lua.msgnack(luaContext));
+    redis.defineCommand('msgerrors', lua.msgerrors(luaContext));
 
     t.pass('done');
 });
@@ -43,17 +53,17 @@ test('enqueue first message', async (t) => {
         'message id match',
     );
     t.equal(
-        await redis.get('pk'),
+        await redis.get(luaContext.keySeq),
         '1',
         'redis pk match',
     );
     t.deepEqual(
-        await redis.lrange('queue', 0, -1),
+        await redis.lrange(luaContext.keyQueue, 0, -1),
         ['1'],
         'redis queue match',
     );
     t.deepEqual(
-        await redis.hgetall('store'),
+        await redis.hgetall(luaContext.keyStore),
         { 1: 'lorem ipsum' },
         'redis store match',
     );
@@ -64,22 +74,22 @@ test('enqueue second message', async (t) => {
 
     t.equal(messageId, 2, 'message id match');
     t.equal(
-        await redis.get('pk'),
+        await redis.get(luaContext.keySeq),
         '2',
         'message id match',
     );
     t.equal(
-        await redis.get('pk'),
+        await redis.get(luaContext.keySeq),
         '2',
         'redis pk match',
     );
     t.deepEqual(
-        await redis.lrange('queue', 0, -1),
+        await redis.lrange(luaContext.keyQueue, 0, -1),
         ['2', '1'],
         'redis queue match',
     );
     t.deepEqual(
-        await redis.hgetall('store'),
+        await redis.hgetall(luaContext.keyStore),
         { 1: 'lorem ipsum', 2: 'lorem ipsum' },
         'redis store match',
     );
@@ -120,7 +130,7 @@ test('nack invalid id', async (t) => {
 });
 
 test('get errors', async (t) => {
-    const res = await redis.msgerrors();
+    const res = await redis.msgerrors(10);
     t.deepEqual(res, ['lorem ipsum'], 'errors response ok');
 });
 
