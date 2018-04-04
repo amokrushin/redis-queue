@@ -97,7 +97,7 @@ class RedisQueue {
 
         redis.quit();
 
-        return erroredMessages;
+        return erroredMessages.map(this.constructor.deserialize);
     }
 
     async _dequeue() {
